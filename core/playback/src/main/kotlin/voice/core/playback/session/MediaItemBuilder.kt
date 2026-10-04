@@ -15,6 +15,7 @@ internal enum class MediaType {
 
 internal fun MediaItem(
   title: String,
+  displayTitle: String? = null,
   mediaId: MediaId,
   isPlayable: Boolean,
   browsable: Boolean,
@@ -31,6 +32,7 @@ internal fun MediaItem(
     MediaMetadata.Builder()
       .setAlbumTitle(album)
       .setTitle(title)
+      .setDisplayTitle(displayTitle)
       .setArtist(artist)
       .setGenre(genre)
       .setIsBrowsable(browsable)

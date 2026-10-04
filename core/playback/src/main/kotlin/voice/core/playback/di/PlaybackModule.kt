@@ -1,6 +1,7 @@
 package voice.core.playback.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -19,10 +20,12 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import voice.core.data.store.ContinuePlaybackOnDuckStore
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.Media3AudioOffloadFeatureFlagQualifier
 import voice.core.playback.misc.VolumeGain
 import voice.core.playback.notification.MainActivityIntentProvider
+import voice.core.playback.player.DuckableAudioFocusPlayer
 import voice.core.playback.player.DurationInconsistenciesUpdater
 import voice.core.playback.player.OnlyAudioRenderersFactory
 import voice.core.playback.player.VoicePlayer
@@ -56,6 +59,8 @@ object PlaybackModule {
     positionUpdater: PositionUpdater,
     volumeGain: VolumeGain,
     durationInconsistenciesUpdater: DurationInconsistenciesUpdater,
+    scope: CoroutineScope,
+    @ContinuePlaybackOnDuckStore continuePlaybackOnDuckStore: DataStore<Boolean>,
     @Media3AudioOffloadFeatureFlagQualifier media3AudioOffloadFeatureFlag: FeatureFlag<Boolean>,
   ): Player {
     val audioAttributes = AudioAttributes.Builder()
@@ -63,31 +68,37 @@ object PlaybackModule {
       .setUsage(C.USAGE_MEDIA)
       .build()
 
-    return ExoPlayer.Builder(context, onlyAudioRenderersFactory, mediaSourceFactory)
+    val exoPlayer = ExoPlayer.Builder(context, onlyAudioRenderersFactory, mediaSourceFactory)
       .setAudioAttributes(audioAttributes, true)
       .setHandleAudioBecomingNoisy(true)
       .setWakeMode(C.WAKE_MODE_LOCAL)
       .build()
-      .also { player ->
-        if (media3AudioOffloadFeatureFlag.get()) {
-          player.trackSelectionParameters = player.trackSelectionParameters
-            .buildUpon()
-            .setAudioOffloadPreferences(
-              TrackSelectionParameters.AudioOffloadPreferences.Builder()
-                .setAudioOffloadMode(TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-                .setIsGaplessSupportRequired(true)
-                .setIsSpeedChangeSupportRequired(true)
-                .build(),
-            )
-            .build()
-        }
-        playStateDelegatingListener.attachTo(player)
-        positionUpdater.attachTo(player)
-        durationInconsistenciesUpdater.attachTo(player)
-        player.onAudioSessionIdChanged {
-          volumeGain.audioSessionId = it
-        }
+    return DuckableAudioFocusPlayer(
+      player = exoPlayer,
+      context = context,
+      scope = scope,
+      continuePlaybackOnDuckStore = continuePlaybackOnDuckStore,
+      audioAttributes = audioAttributes,
+    ).also { player ->
+      if (media3AudioOffloadFeatureFlag.get()) {
+        player.trackSelectionParameters = player.trackSelectionParameters
+          .buildUpon()
+          .setAudioOffloadPreferences(
+            TrackSelectionParameters.AudioOffloadPreferences.Builder()
+              .setAudioOffloadMode(TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+              .setIsGaplessSupportRequired(true)
+              .setIsSpeedChangeSupportRequired(true)
+              .build(),
+          )
+          .build()
       }
+      playStateDelegatingListener.attachTo(player)
+      positionUpdater.attachTo(player)
+      durationInconsistenciesUpdater.attachTo(player)
+      player.onAudioSessionIdChanged {
+        volumeGain.audioSessionId = it
+      }
+    }
   }
 
   @Provides

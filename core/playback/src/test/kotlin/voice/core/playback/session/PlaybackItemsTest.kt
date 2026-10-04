@@ -72,6 +72,34 @@ class PlaybackItemsTest {
     assertEquals(expected = 1_000, actual = playbackItem?.positionInMediaItem(8_000))
   }
 
+  @Test
+  fun `calculates progress across the whole book`() {
+    val firstChapter = chapter(duration = 20_000, MarkData(startMs = 0, name = "One"))
+    val secondChapter = chapter(duration = 20_000, MarkData(startMs = 0, name = "Two"))
+    val book = book(listOf(firstChapter, secondChapter))
+
+    val progress = book.progressPercentage(
+      chapterId = secondChapter.id,
+      positionInChapterMs = 10_000,
+    )
+
+    assertEquals(expected = 75, actual = progress)
+  }
+
+  @Test
+  fun `clamps book progress at the chapter boundaries`() {
+    val chapter = chapter(duration = 20_000, MarkData(startMs = 0, name = "One"))
+    val book = book(listOf(chapter))
+
+    assertEquals(expected = 0, actual = book.progressPercentage(chapter.id, -1))
+    assertEquals(expected = 100, actual = book.progressPercentage(chapter.id, 25_000))
+  }
+
+  @Test
+  fun `formats progress before the chapter title`() {
+    assertEquals(expected = "42% • Chapter 7", actual = progressDisplayTitle(42, "Chapter 7"))
+  }
+
   private fun chapter(
     @Suppress("SameParameterValue") duration: Long,
     vararg marks: MarkData,

@@ -332,8 +332,9 @@ class VoicePlayer(
     scope.launch {
       updateBook { it.copy(skipSilence = enabled) }
     }
-    if (player is ExoPlayer) {
-      player.skipSilenceEnabled = enabled
+    when (player) {
+      is ExoPlayer -> player.skipSilenceEnabled = enabled
+      is DuckableAudioFocusPlayer -> player.setSkipSilenceEnabled(enabled)
     }
   }
 

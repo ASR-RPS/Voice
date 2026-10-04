@@ -238,6 +238,10 @@
     <string name="settings.playback.auto_rewind.title">Auto rewind</string>
     <!-- Title for the setting that controls skip-forward and rewind duration. -->
     <string name="settings.playback.seek_time.title">Skip amount</string>
+    <!-- Title for allowing playback to continue during duckable audio-focus interruptions. -->
+    <string name="settings.playback.continue_on_duck.title">Keep playing during brief alerts</string>
+    <!-- Summary for allowing playback to continue during duckable audio-focus interruptions. -->
+    <string name="settings.playback.continue_on_duck.summary">Continue playback during duckable sounds such as navigation alerts. Calls and other interruptions can still pause playback.</string>
     <!-- Settings support row for opening the FAQ. -->
     <string name="settings.support.faq.title">FAQ</string>
     <!-- Settings support row for getting help. -->

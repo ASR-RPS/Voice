@@ -12,6 +12,9 @@ public annotation class CurrentBookStore
 public annotation class AutoRewindAmountStore
 
 @Qualifier
+public annotation class ContinuePlaybackOnDuckStore
+
+@Qualifier
 public annotation class SeekTimeStore
 
 @Qualifier

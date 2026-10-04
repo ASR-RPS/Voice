@@ -22,6 +22,7 @@ import voice.core.data.ThemeMode
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AnalyticsConsentStore
 import voice.core.data.store.AutoRewindAmountStore
+import voice.core.data.store.ContinuePlaybackOnDuckStore
 import voice.core.data.store.DeveloperMenuUnlockedStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.SeekTimeStore
@@ -46,6 +47,8 @@ class SettingsViewModel(
   private val autoRewindAmountStore: DataStore<Int>,
   @SeekTimeStore
   private val seekTimeStore: DataStore<Int>,
+  @ContinuePlaybackOnDuckStore
+  private val continuePlaybackOnDuckStore: DataStore<Boolean>,
   private val navigator: Navigator,
   private val appInfoProvider: AppInfoProvider,
   @GridModeStore
@@ -75,6 +78,7 @@ class SettingsViewModel(
     val themeColorScheme by remember { themeColorSchemeStore.data }.collectAsState(initial = ThemeColorScheme.VoiceBlue)
     val autoRewindAmount by remember { autoRewindAmountStore.data }.collectAsState(initial = 0)
     val seekTime by remember { seekTimeStore.data }.collectAsState(initial = 0)
+    val continuePlaybackOnDuck by remember { continuePlaybackOnDuckStore.data }.collectAsState(initial = false)
     val gridMode by remember { gridModeStore.data }.collectAsState(initial = GridMode.GRID)
     val autoSleepTimer by remember { sleepTimerPreferenceStore.data }.collectAsState(
       initial = SleepTimerPreference.Default,
@@ -93,6 +97,7 @@ class SettingsViewModel(
       showThemeColorSchemePref = showThemeColorSchemePref,
       seekTimeInSeconds = seekTime,
       autoRewindInSeconds = autoRewindAmount,
+      continuePlaybackOnDuck = continuePlaybackOnDuck,
       dialog = dialog.value,
       appVersion = appInfoProvider.versionName,
       useGrid = when (gridMode) {
@@ -173,6 +178,12 @@ class SettingsViewModel(
 
   override fun onAutoRewindRowClick() {
     dialog.value = SettingsViewState.Dialog.AutoRewindAmount
+  }
+
+  override fun setContinuePlaybackOnDuck(enabled: Boolean) {
+    mainScope.launch {
+      continuePlaybackOnDuckStore.updateData { enabled }
+    }
   }
 
   override fun dismissDialog() {

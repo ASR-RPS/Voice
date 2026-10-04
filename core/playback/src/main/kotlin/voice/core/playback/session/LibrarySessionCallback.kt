@@ -29,6 +29,7 @@ import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
 import voice.core.data.store.CurrentBookStore
 import voice.core.logging.api.Logger
+import voice.core.playback.misc.VolumeGain
 import voice.core.playback.player.VoicePlayer
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
@@ -43,6 +44,8 @@ class LibrarySessionCallback(
   @CurrentBookStore
   private val currentBookStoreId: DataStore<BookId?>,
   private val bookRepository: BookRepository,
+  private val volumeGain: VolumeGain,
+  private val carPlaybackControls: CarPlaybackControls,
 ) : MediaLibrarySession.Callback {
 
   override fun onAddMediaItems(
@@ -164,9 +167,7 @@ class LibrarySessionCallback(
   ): ConnectionResult {
     Logger.d("onConnect to ${controller.packageName}")
 
-    if (player.playbackState == Player.STATE_IDLE &&
-      controller.packageName == "com.google.android.projection.gearhead"
-    ) {
+    if (player.playbackState == Player.STATE_IDLE && session.isAutoCompanionController(controller)) {
       Logger.d("onConnect to ${controller.packageName} and player is idle.")
       Logger.d("Preparing current book so it shows up as recently played")
       scope.launch {
@@ -178,11 +179,32 @@ class LibrarySessionCallback(
     val sessionCommands = connectionResult.availableSessionCommands
       .buildUpon()
       .add(SessionCommand(CustomCommand.CUSTOM_COMMAND_ACTION, Bundle.EMPTY))
+      .apply {
+        if (session.isAutoCompanionController(controller)) {
+          add(SessionCommand(CustomCommand.CyclePlaybackSpeed.action, Bundle.EMPTY))
+          add(SessionCommand(CustomCommand.CycleVolumeBoost.action, Bundle.EMPTY))
+        }
+      }
       .build()
     return ConnectionResult.accept(
       sessionCommands,
       connectionResult.availablePlayerCommands,
     )
+  }
+
+  override fun onPostConnect(
+    session: MediaSession,
+    controller: ControllerInfo,
+  ) {
+    super.onPostConnect(session, controller)
+    if (session.isAutoCompanionController(controller)) {
+      carPlaybackControls.updateButtons(
+        session = session,
+        controller = controller,
+        speed = player.playbackParameters.speed,
+        gain = volumeGain.gain,
+      )
+    }
   }
 
   private suspend fun prepareCurrentBook() {
@@ -213,6 +235,24 @@ class LibrarySessionCallback(
       }
       is CustomCommand.SetGain -> {
         player.setGain(command.gain)
+      }
+      CustomCommand.CyclePlaybackSpeed -> {
+        player.setPlaybackSpeed(carPlaybackControls.nextSpeed(player.playbackParameters.speed))
+        carPlaybackControls.updateButtons(
+          session = session,
+          controller = controller,
+          speed = player.playbackParameters.speed,
+          gain = volumeGain.gain,
+        )
+      }
+      CustomCommand.CycleVolumeBoost -> {
+        player.setGain(carPlaybackControls.nextGain(volumeGain.gain))
+        carPlaybackControls.updateButtons(
+          session = session,
+          controller = controller,
+          speed = player.playbackParameters.speed,
+          gain = volumeGain.gain,
+        )
       }
     }
 

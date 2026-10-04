@@ -82,6 +82,13 @@ public object StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
+  @ContinuePlaybackOnDuckStore
+  private fun continuePlaybackOnDuck(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("continuePlaybackOnDuck", defaultValue = false)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
   @FadeOutStore
   private fun fadeOut(factory: VoiceDataStoreFactory): DataStore<Duration> {
     return factory.create(

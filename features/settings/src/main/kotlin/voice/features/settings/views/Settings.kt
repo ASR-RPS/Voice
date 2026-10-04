@@ -161,6 +161,13 @@ private fun Settings(
       }
 
       item {
+        ContinuePlaybackOnDuckRow(
+          enabled = viewState.continuePlaybackOnDuck,
+          onEnabledChange = listener::setContinuePlaybackOnDuck,
+        )
+      }
+
+      item {
         AutoSleepTimerCard(viewState.autoSleepTimer, listener)
       }
 

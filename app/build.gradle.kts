@@ -80,6 +80,8 @@ android {
     }
     getByName("debug") {
       isMinifyEnabled = false
+      applicationIdSuffix = ".custom"
+      versionNameSuffix = "-custom"
     }
     all {
       if (appSigningConfig != null) {

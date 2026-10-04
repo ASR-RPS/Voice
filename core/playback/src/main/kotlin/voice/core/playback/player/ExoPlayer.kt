@@ -8,8 +8,9 @@ internal fun Player.onAudioSessionIdChanged(action: (audioSessionId: Int?) -> Un
   fun emitSessionId(id: Int) {
     action(id.takeUnless { it == C.AUDIO_SESSION_ID_UNSET })
   }
-  if (this is ExoPlayer) {
-    emitSessionId(audioSessionId)
+  when (this) {
+    is ExoPlayer -> emitSessionId(audioSessionId)
+    is DuckableAudioFocusPlayer -> emitSessionId(audioSessionId)
   }
   addListener(
     object : Player.Listener {

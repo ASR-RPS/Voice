@@ -51,6 +51,26 @@ internal fun Book.playbackItemForPosition(
   }
 }
 
+internal fun Book.progressPercentage(
+  chapterId: ChapterId,
+  positionInChapterMs: Long,
+): Int? {
+  val chapterIndex = chapters.indexOfFirst { it.id == chapterId }
+  if (chapterIndex < 0) return null
+  if (duration <= 0L) return 0
+
+  val elapsedBeforeChapter = chapters.take(chapterIndex).sumOf { it.duration }
+  val elapsed = elapsedBeforeChapter + positionInChapterMs.coerceIn(0L, chapters[chapterIndex].duration)
+  return ((elapsed.toDouble() / duration.toDouble()) * 100.0)
+    .toInt()
+    .coerceIn(0, 100)
+}
+
+internal fun progressDisplayTitle(
+  percentage: Int,
+  title: CharSequence,
+): String = "$percentage% • $title"
+
 internal val MediaId.bookId: BookId?
   get() = when (this) {
     is MediaId.Book -> id

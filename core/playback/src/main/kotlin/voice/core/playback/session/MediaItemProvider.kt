@@ -77,6 +77,7 @@ class MediaItemProvider(
             mark = mark,
           ),
           content = content,
+          progressPercentage = null,
         )
       }
       MediaId.Recent -> recent()
@@ -103,12 +104,37 @@ class MediaItemProvider(
 
   suspend fun chapters(bookId: BookId): List<MediaItem>? {
     val book = bookRepository.get(bookId) ?: return null
-    return playbackItems(book)
+    return playbackItems(book, includeBookProgress = false)
   }
 
-  internal fun playbackItems(book: Book): List<MediaItem> {
+  internal fun playbackItems(book: Book): List<MediaItem> = playbackItems(book, includeBookProgress = true)
+
+  private fun playbackItems(
+    book: Book,
+    includeBookProgress: Boolean,
+  ): List<MediaItem> {
+    val currentPlaybackItem = book.playbackItemForPosition(
+      chapterId = book.content.currentChapter,
+      positionInChapterMs = book.content.positionInChapter,
+    )
     return book.playbackItems().map { playbackItem ->
-      mediaItem(playbackItem, book.content)
+      val positionInChapter = if (playbackItem.index == currentPlaybackItem?.index) {
+        book.content.positionInChapter
+      } else {
+        playbackItem.mark.startMs
+      }
+      mediaItem(
+        playbackItem = playbackItem,
+        content = book.content,
+        progressPercentage = if (includeBookProgress) {
+          book.progressPercentage(
+            chapterId = playbackItem.chapter.id,
+            positionInChapterMs = positionInChapter,
+          )
+        } else {
+          null
+        },
+      )
     }
   }
 
@@ -158,23 +184,28 @@ class MediaItemProvider(
   private fun mediaItem(
     playbackItem: PlaybackItem,
     content: BookContent,
-  ) = MediaItem(
-    title = playbackItem.mark.name
+    progressPercentage: Int?,
+  ): MediaItem {
+    val title = playbackItem.mark.name
       ?: playbackItem.chapter.name
-      ?: playbackItem.chapter.id.value,
-    mediaId = playbackItem.mediaId,
-    browsable = false,
-    isPlayable = true,
-    sourceUri = playbackItem.chapter.id.toUri(),
-    imageUri = content.cover?.toProvidedUri(),
-    artist = content.author,
-    durationMs = playbackItem.mark.durationMs,
-    clippingConfiguration = ClippingConfiguration.Builder()
-      .setStartPositionMs(playbackItem.mark.startMs)
-      .setEndPositionMs(playbackItem.mark.endMs)
-      .build(),
-    mediaType = MediaType.AudioBookChapter,
-  )
+      ?: playbackItem.chapter.id.value
+    return MediaItem(
+      title = title,
+      displayTitle = progressPercentage?.let { progressDisplayTitle(it, title) },
+      mediaId = playbackItem.mediaId,
+      browsable = false,
+      isPlayable = true,
+      sourceUri = playbackItem.chapter.id.toUri(),
+      imageUri = content.cover?.toProvidedUri(),
+      artist = content.author,
+      durationMs = playbackItem.mark.durationMs,
+      clippingConfiguration = ClippingConfiguration.Builder()
+        .setStartPositionMs(playbackItem.mark.startMs)
+        .setEndPositionMs(playbackItem.mark.endMs)
+        .build(),
+      mediaType = MediaType.AudioBookChapter,
+    )
+  }
 
   private fun File.toProvidedUri(): Uri = imageFileProvider.uri(this)
 }
