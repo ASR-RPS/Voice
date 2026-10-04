@@ -12,7 +12,7 @@ import voice.core.strings.R as StringsR
 
 /** Safe, discrete controls for Android Auto. */
 @Inject
-internal class CarPlaybackControls(private val context: Context) {
+class CarPlaybackControls(private val context: Context) {
 
   fun buttons(
     speed: Float,
